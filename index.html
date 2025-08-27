@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tình yêu — Hiệu ứng nền</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      overflow:hidden;
+      background: radial-gradient(ellipse at 10% 10%, rgba(255,200,230,0.10), transparent 10%),
+                  radial-gradient(ellipse at 90% 80%, rgba(200,220,255,0.06), transparent 12%),
+                  linear-gradient(120deg,#2b0735 0%, #601848 40%, #d64c7b 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+      padding: 12px;
+    }
+
+    .bg-glow{
+      position:fixed;inset:0;pointer-events:none;
+      background:
+        radial-gradient(ellipse at 30% 30%, rgba(255,160,200,0.06), transparent 8%),
+        radial-gradient(ellipse at 70% 70%, rgba(255,220,240,0.04), transparent 12%);
+      mix-blend-mode:screen;
+    }
+    .vignette{
+      position:fixed;inset:0;pointer-events:none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%);
+    }
+
+    .hearts{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+    .heart{
+      position:absolute;
+      width:clamp(16px,5vw,32px);height:clamp(16px,5vw,32px);
+      transform:translate(-50%,-50%) scale(1);
+      opacity:0;
+      will-change:transform,opacity;
+      filter:drop-shadow(0 6px 10px rgba(0,0,0,0.25));
+    }
+    .heart svg{width:100%;height:100%;display:block}
+
+    @keyframes floatUp {
+      0% { transform: translate(-50%, 20vh) scale(var(--s)) rotate(var(--r)); opacity:0; }
+      10% { opacity:1; }
+      50% { transform: translate(calc(-50% + var(--sx)px), calc(-60vh)) scale(calc(var(--s) * 1.05)) rotate(calc(var(--r) + 10deg)); }
+      90% { opacity:0.5; }
+      100% { transform: translate(calc(-50% + var(--sx)px), -20vh) scale(var(--s)) rotate(calc(var(--r) + 20deg)); opacity:0; }
+    }
+
+    .wrap{
+      position:relative;z-index:30;max-width:88ch;padding:28px;border-radius:16px;
+      text-align:center;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.04);backdrop-filter: blur(6px);
+      box-shadow: 0 10px 30px rgba(11,9,20,0.6);
+      width: 100%;
+    }
+    .title{
+      font-size:clamp(20px,6vw,36px);
+      line-height:1.4;color:#fff;margin-bottom:8px;letter-spacing:0.2px;
+    }
+    .subtitle{font-size:clamp(12px,3vw,16px);color:rgba(255,235,245,0.75);margin-bottom:18px}
+    .text{font-size:clamp(16px,4vw,22px);line-height:1.6;white-space:pre-wrap;min-height:3.4em}
+
+    .caret{
+      display:inline-block;width:10px;height:1.05em;vertical-align:bottom;background:#ffd9ee;margin-left:6px;animation:blink 1s steps(1) infinite;border-radius:2px
+    }
+    @keyframes blink{50%{opacity:0}}
+  </style>
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="hearts" id="hearts" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <div class="wrap" role="main" aria-live="polite">
+    <div class="title">Tình yêu</div>
+    <div class="subtitle">đôi khi không yêu một người lại khó đến vậy ...</div>
+    <div id="out" class="text"></div>
+  </div>
+
+  <script>
+    const content = `Tình yêu là những điều nhỏ bé mà vĩ đại.\nLà một cái nắm tay ấm giữa đêm đông,\nlà lời nói dịu dàng làm tim ta mềm lại.\nDẫu thế gian đổi thay, nếu bên nhau chân thành,\nthì mọi khoảnh khắc đều trở nên bất tử. ❤️\n\nVà cứ thế, từng chữ, từng lời, trôi đi như bạn đang đọc một trang sách nhỏ...`;
+    const mode = 'char';
+    const speed = 50;
+    const delay = 500;
+
+    const heartsEl = document.getElementById('hearts');
+    const heartSVG = ()=>`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.35-10-7.07C-0.5 10.9 2 6.5 6 6.5c1.9 0 3.29.99 4 2.09.71-1.1 2.1-2.09 4-2.09 4 0 6.5 4.4 4 7.43C19.5 16.65 12 21 12 21z"/></svg>`;
+    function rand(min,max){return Math.random()*(max-min)+min;}
+    function spawnHearts(count=14){
+      for(let i=0;i<count;i++){
+        const el=document.createElement('div');
+        el.className='heart';
+        const left=rand(5,95);
+        const s=rand(0.6,1.6).toFixed(2);
+        const sx=rand(-40,40).toFixed(0);
+        const r=rand(-25,25).toFixed(0);
+        const dur=rand(6000,12000).toFixed(0);
+        const dly=rand(0,4000).toFixed(0);
+        const hue=Math.floor(rand(320,350));
+        const col=`hsl(${hue} ${rand(65,95).toFixed(0)}% ${rand(55,68).toFixed(0)}%)`;
+        el.style.left=left+'%';
+        el.style.top=rand(80,110)+'%';
+        el.style.color=col;
+        el.style.setProperty('--s', s);
+        el.style.setProperty('--sx', sx);
+        el.style.setProperty('--r', r+'deg');
+        el.style.animation=`floatUp ${dur}ms linear ${dly}ms both`;
+        el.innerHTML=heartSVG();
+        heartsEl.appendChild(el);
+      }
+    }
+    function refreshHearts(){
+      heartsEl.innerHTML='';
+      spawnHearts(14);
+      setTimeout(refreshHearts, 9000);
+    }
+    refreshHearts();
+
+    const out=document.getElementById('out');
+    function tokenize(text,mode){
+      if(mode==='word') return text.match(/\S+|\s+/g)||[];
+      if(mode==='line'){
+        const parts=text.split(/\n/);const tokens=[];
+        for(let i=0;i<parts.length;i++){tokens.push(parts[i]);if(i<parts.length-1)tokens.push('\n');}
+        return tokens;
+      }
+      return [...text];
+    }
+    function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function appendToken(token){
+      if(token==='\n'){out.insertAdjacentHTML('beforeend','<br>');return;}
+      const escaped=escapeHtml(token).replace(/ {2}/g,' &nbsp;');
+      out.insertAdjacentHTML('beforeend', escaped.replace(/\n/g,'<br>'));
+    }
+    const caretEl=document.createElement('span');
+    caretEl.className='caret';caretEl.setAttribute('aria-hidden','true');
+
+    setTimeout(()=>{
+      const tokens=tokenize(content,mode);
+      let i=0;
+      out.innerHTML=''; out.appendChild(caretEl);
+      const t=setInterval(()=>{
+        if(i>=tokens.length){clearInterval(t);return;}
+        appendToken(tokens[i++]); out.appendChild(caretEl);
+      }, Math.max(1,speed));
+    }, Math.max(0,delay));
+  </script>
+</body>
+</html>
